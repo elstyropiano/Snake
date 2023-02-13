@@ -23,7 +23,7 @@ const snake_start = [
 //   return snake
 // }
 
-const apple_start = [19, 1]
+const apple_start = [11, 12]
 const directions = {
   ArrowUp: [0, -1],
   ArrowDown: [0, 1],

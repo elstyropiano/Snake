@@ -7,7 +7,6 @@ import {
   apple_start,
   directions,
   BASIC_POINTS,
-  snakeBody,
 } from "./constans"
 import img_0 from "./images/0.png"
 import img_1 from "./images/1.png"
@@ -56,10 +55,10 @@ const useSnakeLogic = () => {
   const [snakeHead, setSnakeHead] = useState(null)
   const [textPosition, setTextPosition] = useState(null)
   const [appleCollision, setAppleCollision] = useState(false)
+  const [opacity, setOpacity] = useState(1)
   const [win, setWin] = useState(false)
   const canvasRef = useRef()
   const decimalPlaces = 1
-  let opacity = 1
 
   useEffect(() => {
     if (snake.length === 378) {
@@ -72,20 +71,27 @@ const useSnakeLogic = () => {
       const context = canvasRef.current.getContext("2d")
       context.clearRect(0, 0, canvas[0], canvas[1])
       context.setTransform(scale, 0, 0, scale, 0, 0)
-      if (appleCollision) {
-        console.log("kloizja z japkiem")
-        setAppleCollision(false)
-      }
+
       drawTopBar(context)
       drawFruit(context)
       drawBonus(context)
       drawSnake(context)
       // drawGainPointsText(context)
       if (checkFruitIsDrawn(context)) setFirstRender(null) //We need that state because when we click start, we have to wait first for render snake, which is depend on speed, every render is speed. When speed is low snake apears with delay. We have to load snake as fast as it passible so if image apear first render state change for null and then normal speed is working
+      if (appleCollision) {
+        drawGainPointsText(context)
+        // setAppleCollision(false)
+      }
     }
   }, [snake, apple, gameOver])
 
-  const startGame = () => setStart(true)
+  const startGame = () => {
+    setStart(true)
+    setSnake(snake_start)
+    setApple(apple_start)
+    setDirection(directions.ArrowRight)
+    setAppleCollision(false)
+  }
 
   const pauseGame = () => {
     setPause(!pause)
@@ -100,22 +106,23 @@ const useSnakeLogic = () => {
   const choseImage = () => images[fruitNumber]
 
   const drawGainPointsText = (context) => {
+    console.log("wydarza sie")
     let fadeIn = true
 
     // context.clearRect(0, 0, canvas.width, canvas.height)
 
     context.font = `12/${scale}px Arial`
-    context.fillStyle = `rgba(22, 11, 255, ${opacity})`
+    context.fillStyle = `rgba(76, 175, 80, ${opacity})`
     context.fillText(
       `+${BASIC_POINTS * pointsMultiplier} xp`,
-      textPosition?.[0],
-      textPosition?.[1]
+      snake[0][0],
+      snake[0][1]
     )
 
     if (fadeIn) {
-      opacity += 0.05
+      setOpacity((prev) => (prev -= 0.1))
     } else {
-      opacity -= 0.05
+      setOpacity((prev) => (prev += 0.1))
     }
 
     if (opacity >= 1) {
@@ -191,6 +198,7 @@ const useSnakeLogic = () => {
 
     if (snakeHead[0] === apple[0] && snakeHead[1] === apple[1]) {
       setAppleCollision(true)
+      setOpacity(1)
       // setTextPosition([apple[0], apple[1] - 1])
       let newApple = createApple()
       const randomNumber = Math.floor(Math.random() * 13)
