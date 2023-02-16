@@ -25,15 +25,15 @@ const SliderDescriptionWrapper = styled("div")(
   `
 );
 
-const StyledSlider = styled(Slider)`
-  && {
-    color: ${({ value }) => `
-      rgb(${Math.round(255 * (100 - value)) / 100}, ${Math.round(
-      (255 * value) / 100
-    )}, 0)
-    `};
-  }
-`;
+const StyledSlider = styled(Slider)(
+  ({ value }) => css`
+    color: rgb(
+      ${Math.round(255 * (100 - value)) / 100},
+      ${Math.round((255 * value) / 100)},
+      0
+    );
+  `
+);
 
 const SnakeSpeedSlider = ({
   setSpeed,
