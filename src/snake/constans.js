@@ -1,4 +1,4 @@
-const canvas = [800, 800]
+const canvasSize = [800, 800]
 const scale = 40
 const snake_start = [
   [8, 18],
@@ -33,7 +33,7 @@ const directions = {
 const SPEED = 500
 const BASIC_POINTS = 1
 export {
-  canvas,
+  canvasSize,
   scale,
   snake_start,
   apple_start,

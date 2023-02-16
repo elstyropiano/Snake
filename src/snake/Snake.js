@@ -1,14 +1,37 @@
 import { styled, css, Button } from "@mui/material"
 
 import StartGameArea from "./StartGameArea"
-import { canvas } from "./constans"
+import { canvasSize } from "./constans"
 import GameOver from "./GameOver"
 import Logic from "./useSnakeLogic"
 
-const Canvas = styled("canvas")(
+const CanvasSnake = styled("canvas")(
   css`
-    border: 3px solid rgb(112, 99, 192);
-    background-color: rgb(7, 13, 38);
+    /* border: 3px solid rgb(112, 99, 192); */
+    /* background-color: rgb(7, 13, 38); */
+    position: absolute;
+    top: 0;
+    left: 0;
+  `
+)
+const CanvasTopBar = styled("canvas")(
+  css`
+    position: absolute;
+    top: 0;
+    left: 0;
+
+    /* border: 3px solid rgb(112, 99, 192);
+    background-color: rgb(7, 13, 38); */
+  `
+)
+const CanvasElements = styled("canvas")(
+  css`
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+    /* border: 3px solid rgb(112, 99, 192);
+    background-color: rgb(7, 13, 38); */
   `
 )
 const GameWrapper = styled("div")(
@@ -46,7 +69,9 @@ const Snake = () => {
     pause,
     score,
     win,
-    canvasRef,
+    canvasRef1,
+    canvasRef2,
+    canvasRef3,
     setPointsMultiplier,
     setSpeed,
     startGame,
@@ -60,7 +85,23 @@ const Snake = () => {
       <div role='button' tabIndex='0' onKeyDown={(e) => moveSnake(e)}>
         <GameWrapper>
           {!gameOver && start && (
-            <Canvas width={canvas[0]} height={canvas[1]} ref={canvasRef} />
+            <>
+              <CanvasSnake
+                width={canvasSize[0]}
+                height={canvasSize[1]}
+                ref={canvasRef1}
+              />
+              <CanvasTopBar
+                width={canvasSize[0]}
+                height={canvasSize[1]}
+                ref={canvasRef2}
+              />
+              <CanvasTopBar
+                width={canvasSize[0]}
+                height={canvasSize[1]}
+                ref={canvasRef3}
+              />
+            </>
           )}
           <Wrapper>
             {!start && !gameOver && (

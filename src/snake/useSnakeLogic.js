@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from "react"
 
 import {
-  canvas,
+  canvasSize,
   scale,
   snake_start,
   apple_start,
   directions,
   BASIC_POINTS,
 } from "./constans"
+
 import img_0 from "./images/0.png"
 import img_1 from "./images/1.png"
 import img_2 from "./images/2.png"
@@ -41,7 +42,7 @@ const images = [
 
 const useSnakeLogic = () => {
   const [apple, setApple] = useState(apple_start)
-  const [bonus, setBonus] = useState(null)
+
   const [pointsMultiplier, setPointsMultiplier] = useState(5)
   const [snake, setSnake] = useState(snake_start)
   const [direction, setDirection] = useState(directions.ArrowRight)
@@ -53,11 +54,21 @@ const useSnakeLogic = () => {
   const [firstRender, setFirstRender] = useState(1)
   const [score, setScore] = useState(0)
   const [snakeHead, setSnakeHead] = useState(null)
-  const [textPosition, setTextPosition] = useState(null)
-  const [appleCollision, setAppleCollision] = useState(false)
   const [opacity, setOpacity] = useState(1)
+  const [appleCollision, setAppleCollision] = useState(false)
+  const [textPosition, setTextPosition] = useState(apple)
+  const [applePosition, setApplePosition] = useState(apple_start)
   const [win, setWin] = useState(false)
-  const canvasRef = useRef()
+  const [bonus, setBonus] = useState(false)
+  const [bonusPosition, setBonusPosition] = useState([2, 9])
+  const [timeToTheNextBonus, setTimeToTheNextBonus] = useState(null)
+  const [timeCounterId, setTimeCounterId] = useState(null)
+  const [gameLoopNum, setGameLoopNum] = useState(0)
+  const [bonusApear, setBonusApear] = useState(null)
+  const [counterTopBarId, setCounterTopBarId] = useState(null)
+  const canvasRef1 = useRef()
+  const canvasRef2 = useRef()
+  const canvasRef3 = useRef()
   const decimalPlaces = 1
 
   useEffect(() => {
@@ -66,31 +77,124 @@ const useSnakeLogic = () => {
       setGameOver(true)
       return
     }
-
     if (start) {
-      const context = canvasRef.current.getContext("2d")
-      context.clearRect(0, 0, canvas[0], canvas[1])
-      context.setTransform(scale, 0, 0, scale, 0, 0)
-
-      drawTopBar(context)
-      drawFruit(context)
-      drawBonus(context)
+      const context = createContext(canvasRef2)
+      const snakeHead = snake[0]
       drawSnake(context)
-      // drawGainPointsText(context)
-      if (checkFruitIsDrawn(context)) setFirstRender(null) //We need that state because when we click start, we have to wait first for render snake, which is depend on speed, every render is speed. When speed is low snake apears with delay. We have to load snake as fast as it passible so if image apear first render state change for null and then normal speed is working
-      if (appleCollision) {
-        drawGainPointsText(context)
-        // setAppleCollision(false)
-      }
+
+      if (checkElementIsDrawn(context, snakeHead)) setFirstRender(null)
     }
-  }, [snake, apple, gameOver])
+  }, [snake])
+
+  useEffect(() => {
+    if (start) {
+      const context = createContext(canvasRef3)
+      drawFruit(context)
+
+      if (appleCollision) drawGainPointsText(context)
+      if (bonus) drawBonus(context)
+    }
+  }, [gameLoopNum])
+
+  useEffect(() => {
+    if (start && timeToTheNextBonus) {
+      console.log(timeToTheNextBonus, "timeToTheNextBonus")
+      countdownToTheBonus(timeToTheNextBonus)
+      // setBonusApear(timeToTheNextBonus)
+    }
+    if (!start || !timeToTheNextBonus) {
+      clearInterval(timeCounterId)
+      clearInterval(counterTopBarId)
+    }
+  }, [timeToTheNextBonus, start])
+
+  useEffect(() => {
+    if (!start) {
+      return
+    }
+    if (start || !bonus) {
+      const randomNum = Math.floor(Math.random() * 2) + 5
+      setTimeToTheNextBonus(randomNum)
+      setBonusApear(randomNum)
+    }
+  }, [start])
+
+  useEffect(() => {
+    if (start) {
+      const context = createContext(canvasRef1)
+      const bonusStatus = bonusApear ? "cooldown" : "disapear"
+      drawTopBar(context, bonusStatus, bonusApear)
+    }
+  }, [score, start, bonusApear])
+
+  const countdownToTheBonus = (timeToTheNextBonus) => {
+    let timeRemaning = timeToTheNextBonus
+    const couterTopBar = setInterval(() => {
+      timeRemaning -= 1
+      setBonusApear((prev) => {
+        console.log(prev, "prev")
+        return (prev -= 1)
+      })
+    }, 1000)
+
+    setCounterTopBarId(couterTopBar)
+    const timeCounterId = setInterval(() => {
+      setBonus(true)
+      setTimeToTheNextBonus(null)
+    }, timeToTheNextBonus * 1000)
+
+    setTimeCounterId(timeCounterId)
+  }
+
+  const gameElementsLoop = () => setGameLoopNum((prev) => (prev += 1))
+
+  const createContext = (ref) => {
+    const context = ref.current.getContext("2d")
+    context.clearRect(0, 0, canvasSize[0], canvasSize[1])
+    context.setTransform(scale, 0, 0, scale, 0, 0)
+    return context
+  }
+
+  const snakeLoop = () => {
+    const snakeCopy = [...snake]
+    const snakeHead = snakeCopy[0]
+
+    const newSnakeHead = [
+      snakeHead[0] + direction[0],
+      snakeHead[1] + direction[1],
+    ]
+    snakeCopy.unshift(newSnakeHead)
+    if (checkCollision(newSnakeHead)) endGame()
+    if (!checkAppleCollision(snakeCopy)) snakeCopy.pop()
+    if (checkBonusCollision(snakeCopy)) {
+      // console.log("cos sie dzieje po najechaniu bonusu")
+    }
+    setSnake(snakeCopy)
+  }
+
+  const drawSnake = (context) => {
+    context.fillStyle = "rgb(112, 99, 192)"
+    snake.forEach(([x, y]) => {
+      context.beginPath()
+      const circleRay = 20
+      context.arc(
+        x + circleRay / scale,
+        y + circleRay / scale,
+        circleRay / scale,
+        0,
+        2 * Math.PI
+      )
+      context.fill()
+      // context.fillRect(x, y, 1, 1, 1)
+    })
+  }
 
   const startGame = () => {
-    setStart(true)
-    setSnake(snake_start)
     setApple(apple_start)
+    setBonusPosition([2, 9])
     setDirection(directions.ArrowRight)
-    setAppleCollision(false)
+    setSnake(snake_start)
+    setStart(true)
   }
 
   const pauseGame = () => {
@@ -98,39 +202,37 @@ const useSnakeLogic = () => {
   }
 
   const endGame = () => {
+    setGameOver(true)
     setSpeed(10)
     setStart(false)
-    setGameOver(true)
+    setTimeToTheNextBonus(null)
   }
 
   const choseImage = () => images[fruitNumber]
 
   const drawGainPointsText = (context) => {
-    console.log("wydarza sie")
-    let fadeIn = true
-
-    // context.clearRect(0, 0, canvas.width, canvas.height)
-
-    context.font = `12/${scale}px Arial`
+    context.font = `${24 / scale}px Arial`
     context.fillStyle = `rgba(76, 175, 80, ${opacity})`
     context.fillText(
-      `+${BASIC_POINTS * pointsMultiplier} xp`,
-      snake[0][0],
-      snake[0][1]
+      `+${BASIC_POINTS * pointsMultiplier} points`,
+      textPosition?.[0],
+      textPosition?.[1]
     )
-
-    if (fadeIn) {
-      setOpacity((prev) => (prev -= 0.1))
-    } else {
-      setOpacity((prev) => (prev += 0.1))
+    setTextPosition((prev) => textAnimation(prev))
+    if (opacity <= 0) {
+      setAppleCollision(false)
     }
-
-    if (opacity >= 1) {
-      fadeIn = false
-    } else if (opacity <= 0) {
-      fadeIn = true
-    }
+    setOpacity((prev) => (prev -= 0.05))
   }
+
+  const textAnimation = (position) => {
+    const moveX = applePosition[0] >= 17 ? -0.05 : 0.05
+    const moveY = applePosition[1] >= 3 ? -0.05 : 0.05
+    position[0] += moveX
+    position[1] += moveY
+    return position
+  }
+
   const newScore = (prev) => {
     const num = prev + BASIC_POINTS * pointsMultiplier
     const newScore =
@@ -158,22 +260,23 @@ const useSnakeLogic = () => {
     apple.map((_, i) => {
       if (i === 1) {
         // we dont need y at position 0 because is topbar
-        const positionY = Math.floor(Math.random() * canvas[i] - 40 / scale) + 1
+        const positionY =
+          Math.floor(Math.random() * canvasSize[i] - 40 / scale) + 1
         return positionY
       }
-      const positonX = Math.floor((Math.random() * canvas[i]) / scale)
+      const positonX = Math.floor((Math.random() * canvasSize[i]) / scale)
       return positonX
     })
 
   const createBonus = () =>
-    bonus.map((_, i) => Math.floor((Math.random() * canvas[i]) / scale))
+    bonus.map((_, i) => Math.floor((Math.random() * canvasSize[i]) / scale))
 
   const checkCollision = (piece, snk = snake, compareItem) => {
     // collision snakeHead with wall
     if (
-      piece[0] * scale >= canvas[0] ||
+      piece[0] * scale >= canvasSize[0] ||
       piece[0] < 0 ||
-      piece[1] * scale >= canvas[1] ||
+      piece[1] * scale >= canvasSize[1] ||
       piece[1] < 0 + 40 / scale
     )
       return true
@@ -181,13 +284,12 @@ const useSnakeLogic = () => {
     for (const segment of snk) {
       // collision snakeHead with snake body
       if (piece[0] === segment[0] && piece[1] === segment[1]) {
-        console.log("kolizja ze snejkiem")
+        // console.log("kolizja ze snejkiem")
         return true
       }
     }
     if (piece?.[0] === compareItem?.[0] && piece?.[1] === compareItem?.[1]) {
       //apple and bonus colision
-      console.log("kolizja z japkiem")
       return true
     }
     return false
@@ -197,9 +299,19 @@ const useSnakeLogic = () => {
     const snakeHead = snake[0]
 
     if (snakeHead[0] === apple[0] && snakeHead[1] === apple[1]) {
+      const newTextPosition = [...apple]
+      setApplePosition(apple)
+      if (apple[0] >= 18) {
+        newTextPosition[0] = 17
+        setTextPosition(newTextPosition)
+      } else {
+        setTextPosition(newTextPosition)
+      }
+
       setAppleCollision(true)
+
       setOpacity(1)
-      // setTextPosition([apple[0], apple[1] - 1])
+
       let newApple = createApple()
       const randomNumber = Math.floor(Math.random() * 13)
       setFruitNumber(randomNumber)
@@ -209,8 +321,8 @@ const useSnakeLogic = () => {
         newApple = createApple()
       }
 
-      setApple(newApple)
-      // setAppleCollision(false)
+      setApple([19, 1])
+
       return true
     }
   }
@@ -222,40 +334,25 @@ const useSnakeLogic = () => {
       while (checkCollision(newBonus, snake, apple)) {
         newBonus = createBonus()
       }
-      setBonus(newBonus)
+      setBonusPosition(newBonus)
       return true
     }
   }
-  const gameLoop = () => {
-    const snakeCopy = [...snake]
-    const snakeHead = snakeCopy[0]
 
-    const newSnakeHead = [
-      snakeHead[0] + direction[0],
-      snakeHead[1] + direction[1],
-    ]
-    snakeCopy.unshift(newSnakeHead)
-    if (checkCollision(newSnakeHead)) endGame()
-    if (!checkAppleCollision(snakeCopy)) snakeCopy.pop()
-    if (checkBonusCollision(snakeCopy)) {
-      console.log("cos sie dzieje po najechaniu bonusu")
-    }
-    setSnake(snakeCopy)
-  }
-
-  const drawTopBar = (context) => {
+  const drawTopBar = (context, bonusStatus, timeToTheNextBonus) => {
     context.fillStyle = "rgb(112, 99, 192)"
     context.strokeStyle = "rgb(112, 99, 192)"
     context.beginPath()
     context.moveTo(0, 37 / scale)
-    context.lineTo(canvas[0] / scale, 37 / scale)
+    context.lineTo(canvasSize[0] / scale, 37 / scale)
     context.lineWidth = 3 / scale
     context.stroke()
     context.font = `${25 / scale}px Arial`
     context.fillText(`Snake speed: ${speed}%`, 20 / scale, 25 / scale)
+    context.fillText(`Bonus ${bonusStatus}: ${bonusApear}s`, 7, 25 / scale)
     context.fillText(
       `Score  ${score}`,
-      canvas[0] / scale - 150 / scale,
+      canvasSize[0] / scale - 150 / scale,
       25 / scale
     )
   }
@@ -270,46 +367,42 @@ const useSnakeLogic = () => {
     context.fillStyle = "rgb(112, 99, 192)"
     // const appleImage = new Image()
     // appleImage.src = choseImage()
-    context.fillRect(bonus?.[0], bonus?.[1], 1, 1)
+    context.fillRect(bonusPosition?.[0], bonusPosition?.[1], 1, 1)
   }
 
-  const checkFruitIsDrawn = (context) =>
-    context
-      .getImageData(apple[0] * scale, apple[1] * scale, 1 * scale, 1 * scale)
+  const checkElementIsDrawn = (context, element) => {
+    return context
+      .getImageData(element[0] * scale, element[1] * scale, scale, scale)
       .data.some((channel) => channel !== 0)
-
-  const drawSnake = (context) => {
-    context.fillStyle = "rgb(112, 99, 192)"
-    snake.forEach(([x, y]) => {
-      context.beginPath()
-      const circleRay = 20
-      context.arc(
-        x + circleRay / scale,
-        y + circleRay / scale,
-        circleRay / scale,
-        0,
-        2 * Math.PI
-      )
-      context.fill()
-      // context.fillRect(x, y, 1, 1, 1)
-    })
   }
 
   useInterval(
-    () => gameLoop(),
+    () => snakeLoop(),
     firstRender ? firstRender : 7000 / speed,
     start,
-    pause,
-    setFirstRender
+    pause
   )
+  useInterval(
+    () => gameElementsLoop(),
+    firstRender ? firstRender : 70,
+    start,
+    pause
+  )
+
   const playAgain = () => {
-    setGameOver(false)
     setStart(false)
+    setTimeToTheNextBonus(null)
+    setBonus(false)
+    setGameOver(false)
+
     setPointsMultiplier(5)
     setSpeed(50)
     setScore(0)
     setSnake(snake_start)
     setWin(false)
+    setTextPosition(null)
+    setFirstRender(1)
+    setAppleCollision(false)
   }
 
   return {
@@ -339,9 +432,11 @@ const useSnakeLogic = () => {
     setFirstRender,
     score,
     setScore,
-    canvasRef,
+    canvasRef1,
     moveSnake,
     win,
+    canvasRef2,
+    canvasRef3,
   }
 }
 
