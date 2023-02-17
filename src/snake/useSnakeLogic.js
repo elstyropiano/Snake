@@ -61,11 +61,14 @@ const useSnakeLogic = () => {
   const [win, setWin] = useState(false)
   const [bonus, setBonus] = useState(false)
   const [bonusPosition, setBonusPosition] = useState([2, 9])
-  const [timeToTheNextBonus, setTimeToTheNextBonus] = useState(null)
-  const [timeCounterId, setTimeCounterId] = useState(null)
   const [gameLoopNum, setGameLoopNum] = useState(0)
-  const [bonusApear, setBonusApear] = useState(null)
-  const [counterTopBarId, setCounterTopBarId] = useState(null)
+
+  const [timeToBonusAppear, setTimeToBonusAppear] = useState(null)
+  const [timeToBonusDisappear, setTimeToBonusDisappear] = useState(null)
+
+  const [counterBonusDisappearId, setCounterBonusDisappearId] = useState(null)
+  const [counterBonusAppearId, setCounterBonusAppearId] = useState(null)
+
   const canvasRef1 = useRef()
   const canvasRef2 = useRef()
   const canvasRef3 = useRef()
@@ -90,6 +93,7 @@ const useSnakeLogic = () => {
     if (start) {
       const context = createContext(canvasRef3)
       drawFruit(context)
+      console.log(apple, "apple")
 
       if (appleCollision) drawGainPointsText(context)
       if (bonus) drawBonus(context)
@@ -97,53 +101,69 @@ const useSnakeLogic = () => {
   }, [gameLoopNum])
 
   useEffect(() => {
-    if (start && timeToTheNextBonus) {
-      console.log(timeToTheNextBonus, "timeToTheNextBonus")
-      countdownToTheBonus(timeToTheNextBonus)
-      // setBonusApear(timeToTheNextBonus)
+    if (start) {
+      const context = createContext(canvasRef1)
+      const bonusStatus = timeToBonusAppear ? "appear" : "disappear"
+      const counter = timeToBonusAppear
+        ? timeToBonusAppear
+        : timeToBonusDisappear
+      drawTopBar(context, bonusStatus, counter)
     }
-    if (!start || !timeToTheNextBonus) {
-      clearInterval(timeCounterId)
-      clearInterval(counterTopBarId)
-    }
-  }, [timeToTheNextBonus, start])
-
-  useEffect(() => {
-    if (!start) {
-      return
-    }
-    if (start || !bonus) {
-      const randomNum = Math.floor(Math.random() * 2) + 5
-      setTimeToTheNextBonus(randomNum)
-      setBonusApear(randomNum)
-    }
-  }, [start])
+  }, [score, start, timeToBonusAppear, timeToBonusDisappear])
 
   useEffect(() => {
     if (start) {
-      const context = createContext(canvasRef1)
-      const bonusStatus = bonusApear ? "cooldown" : "disapear"
-      drawTopBar(context, bonusStatus, bonusApear)
+      if (bonus) {
+        const newBonusPosition = createElementPosition(bonusPosition)
+        setBonusPosition(newBonusPosition)
+        const randomNum = Math.floor(Math.random() * 3) + 5
+        setTimeToBonusDisappear(randomNum)
+        countdownBonusDisappear()
+        return
+      }
+      const randomNum = Math.floor(Math.random() * 2) + 5
+      setTimeToBonusAppear(randomNum)
+      countdownBonusAppear()
     }
-  }, [score, start, bonusApear])
+  }, [bonus, start])
 
-  const countdownToTheBonus = (timeToTheNextBonus) => {
-    let timeRemaning = timeToTheNextBonus
-    const couterTopBar = setInterval(() => {
-      timeRemaning -= 1
-      setBonusApear((prev) => {
-        console.log(prev, "prev")
-        return (prev -= 1)
-      })
-    }, 1000)
+  const createElementPosition = (elementArray) =>
+    elementArray.map((_, i) =>
+      i === 1
+        ? Math.floor((Math.random() * (canvasSize[i] - 40)) / scale) + 1
+        : Math.floor((Math.random() * canvasSize[i]) / scale)
+    )
 
-    setCounterTopBarId(couterTopBar)
-    const timeCounterId = setInterval(() => {
-      setBonus(true)
-      setTimeToTheNextBonus(null)
-    }, timeToTheNextBonus * 1000)
+  const countdownBonusDisappear = () => {
+    const counterBonusDisappear = setInterval(
+      () =>
+        setTimeToBonusDisappear((prev) => {
+          if (prev - 1 === 0) {
+            setBonus(false)
+            clearInterval(counterBonusDisappear)
+            return null
+          }
+          return (prev -= 1)
+        }),
+      1000
+    )
+    setCounterBonusDisappearId(counterBonusDisappear)
+  }
 
-    setTimeCounterId(timeCounterId)
+  const countdownBonusAppear = () => {
+    const couterBonusAppear = setInterval(
+      () =>
+        setTimeToBonusAppear((prev) => {
+          if (prev - 1 === 0) {
+            setBonus(true)
+            clearInterval(couterBonusAppear)
+            return null
+          }
+          return (prev -= 1)
+        }),
+      1000
+    )
+    setCounterBonusAppearId(couterBonusAppear)
   }
 
   const gameElementsLoop = () => setGameLoopNum((prev) => (prev += 1))
@@ -202,10 +222,17 @@ const useSnakeLogic = () => {
   }
 
   const endGame = () => {
+    const intervalToStopId = bonus
+      ? counterBonusDisappearId
+      : counterBonusAppearId
+
+    clearInterval(intervalToStopId)
+
     setGameOver(true)
     setSpeed(10)
     setStart(false)
-    setTimeToTheNextBonus(null)
+
+    setBonus(false)
   }
 
   const choseImage = () => images[fruitNumber]
@@ -256,21 +283,6 @@ const useSnakeLogic = () => {
     setSnakeHead(snake[0])
   }
 
-  const createApple = () =>
-    apple.map((_, i) => {
-      if (i === 1) {
-        // we dont need y at position 0 because is topbar
-        const positionY =
-          Math.floor(Math.random() * canvasSize[i] - 40 / scale) + 1
-        return positionY
-      }
-      const positonX = Math.floor((Math.random() * canvasSize[i]) / scale)
-      return positonX
-    })
-
-  const createBonus = () =>
-    bonus.map((_, i) => Math.floor((Math.random() * canvasSize[i]) / scale))
-
   const checkCollision = (piece, snk = snake, compareItem) => {
     // collision snakeHead with wall
     if (
@@ -312,16 +324,16 @@ const useSnakeLogic = () => {
 
       setOpacity(1)
 
-      let newApple = createApple()
+      let newApple = createElementPosition(apple)
       const randomNumber = Math.floor(Math.random() * 13)
       setFruitNumber(randomNumber)
       setScore((prev) => newScore(prev))
 
       while (checkCollision(newApple, snake, bonus)) {
-        newApple = createApple()
+        newApple = createElementPosition(apple)
       }
 
-      setApple([19, 1])
+      setApple(newApple)
 
       return true
     }
@@ -330,16 +342,17 @@ const useSnakeLogic = () => {
     const snakeHead = snake[0]
 
     if (snakeHead[0] === bonus?.[0] && snakeHead[1] === bonus?.[1]) {
-      let newBonus = createBonus()
+      let newBonus = createElementPosition(bonusPosition)
       while (checkCollision(newBonus, snake, apple)) {
-        newBonus = createBonus()
+        newBonus = createElementPosition(bonusPosition)
       }
       setBonusPosition(newBonus)
       return true
     }
   }
 
-  const drawTopBar = (context, bonusStatus, timeToTheNextBonus) => {
+  const drawTopBar = (context, bonusStatus, counter) => {
+    console.log(counter, "counter w funckji topbar")
     context.fillStyle = "rgb(112, 99, 192)"
     context.strokeStyle = "rgb(112, 99, 192)"
     context.beginPath()
@@ -349,7 +362,7 @@ const useSnakeLogic = () => {
     context.stroke()
     context.font = `${25 / scale}px Arial`
     context.fillText(`Snake speed: ${speed}%`, 20 / scale, 25 / scale)
-    context.fillText(`Bonus ${bonusStatus}: ${bonusApear}s`, 7, 25 / scale)
+    context.fillText(`Bonus ${bonusStatus}: ${counter}s`, 7, 25 / scale)
     context.fillText(
       `Score  ${score}`,
       canvasSize[0] / scale - 150 / scale,
@@ -364,6 +377,7 @@ const useSnakeLogic = () => {
   }
 
   const drawBonus = (context) => {
+    console.log(bonusPosition)
     context.fillStyle = "rgb(112, 99, 192)"
     // const appleImage = new Image()
     // appleImage.src = choseImage()
@@ -391,8 +405,8 @@ const useSnakeLogic = () => {
 
   const playAgain = () => {
     setStart(false)
-    setTimeToTheNextBonus(null)
-    setBonus(false)
+
+    setTimeToBonusAppear(false)
     setGameOver(false)
 
     setPointsMultiplier(5)
