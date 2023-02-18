@@ -12,14 +12,14 @@ const snake_start = [
 //     }
 //     return 19
 //   }
-//   console.log(snake, "snake")
+//   // console.log(snake, "snake")
 //   for (let i = 1; i <= 19; i++) {
 //     for (let j = num(i); j >= 0; j--) {
-//       console.log(j, "j")
+//       // console.log(j, "j")
 //       snake.push([j, i])
 //     }
 //   }
-//   console.log(snake, "snake")
+//   // console.log(snake, "snake")
 //   return snake
 // }
 

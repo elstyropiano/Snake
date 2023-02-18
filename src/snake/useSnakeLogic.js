@@ -4,7 +4,6 @@ import {
   canvasSize,
   scale,
   snake_start,
-  apple_start,
   directions,
   BASIC_POINTS,
 } from "./constans"
@@ -41,8 +40,8 @@ const images = [
 ]
 
 const useSnakeLogic = () => {
-  const [apple, setApple] = useState(apple_start)
-
+  const [applePosition, setApplePosition] = useState([])
+  const [bonusPosition, setBonusPosition] = useState([])
   const [pointsMultiplier, setPointsMultiplier] = useState(5)
   const [snake, setSnake] = useState(snake_start)
   const [direction, setDirection] = useState(directions.ArrowRight)
@@ -56,19 +55,16 @@ const useSnakeLogic = () => {
   const [snakeHead, setSnakeHead] = useState(null)
   const [opacity, setOpacity] = useState(1)
   const [appleCollision, setAppleCollision] = useState(false)
-  const [textPosition, setTextPosition] = useState(apple)
-  const [applePosition, setApplePosition] = useState(apple_start)
+  const [textPosition, setTextPosition] = useState(applePosition)
+
   const [win, setWin] = useState(false)
   const [bonus, setBonus] = useState(false)
-  const [bonusPosition, setBonusPosition] = useState([2, 9])
-  const [gameLoopNum, setGameLoopNum] = useState(0)
 
+  const [gameLoopNum, setGameLoopNum] = useState(0)
   const [timeToBonusAppear, setTimeToBonusAppear] = useState(null)
   const [timeToBonusDisappear, setTimeToBonusDisappear] = useState(null)
-
   const [counterBonusDisappearId, setCounterBonusDisappearId] = useState(null)
   const [counterBonusAppearId, setCounterBonusAppearId] = useState(null)
-
   const canvasRef1 = useRef()
   const canvasRef2 = useRef()
   const canvasRef3 = useRef()
@@ -77,6 +73,7 @@ const useSnakeLogic = () => {
   useEffect(() => {
     if (snake.length === 378) {
       setWin(true)
+      setStart(false)
       setGameOver(true)
       return
     }
@@ -91,12 +88,30 @@ const useSnakeLogic = () => {
 
   useEffect(() => {
     if (start) {
+      if (bonus) {
+        createElementPosition(applePosition, setBonusPosition)
+        const randomNum = Math.floor(Math.random() * 3) + 5
+        setTimeToBonusDisappear(randomNum)
+        const counterId = counter(setTimeToBonusDisappear, false)
+        setCounterBonusDisappearId(counterId)
+        return
+      }
+      const randomNum = Math.floor(Math.random() * 2) + 5
+      setTimeToBonusAppear(randomNum)
+      const counterId = counter(setTimeToBonusAppear, true)
+
+      setCounterBonusAppearId(counterId)
+    }
+  }, [bonus, start])
+
+  useEffect(() => {
+    if (start) {
       const context = createContext(canvasRef3)
-      drawFruit(context)
-      console.log(apple, "apple")
 
       if (appleCollision) drawGainPointsText(context)
       if (bonus) drawBonus(context)
+
+      drawFruit(context)
     }
   }, [gameLoopNum])
 
@@ -111,59 +126,34 @@ const useSnakeLogic = () => {
     }
   }, [score, start, timeToBonusAppear, timeToBonusDisappear])
 
-  useEffect(() => {
-    if (start) {
-      if (bonus) {
-        const newBonusPosition = createElementPosition(bonusPosition)
-        setBonusPosition(newBonusPosition)
-        const randomNum = Math.floor(Math.random() * 3) + 5
-        setTimeToBonusDisappear(randomNum)
-        countdownBonusDisappear()
-        return
-      }
-      const randomNum = Math.floor(Math.random() * 2) + 5
-      setTimeToBonusAppear(randomNum)
-      countdownBonusAppear()
-    }
-  }, [bonus, start])
+  const createElementPosition = (elementToCompare, setPosition) => {
+    let newElementPosition
+    const arr = ["", ""]
+    do {
+      newElementPosition = arr.map((_, i) =>
+        i === 1
+          ? Math.floor((Math.random() * (canvasSize[i] - 40)) / scale) + 1
+          : Math.floor((Math.random() * canvasSize[i]) / scale)
+      )
+    } while (checkCollision(newElementPosition, snake, elementToCompare))
 
-  const createElementPosition = (elementArray) =>
-    elementArray.map((_, i) =>
-      i === 1
-        ? Math.floor((Math.random() * (canvasSize[i] - 40)) / scale) + 1
-        : Math.floor((Math.random() * canvasSize[i]) / scale)
-    )
-
-  const countdownBonusDisappear = () => {
-    const counterBonusDisappear = setInterval(
-      () =>
-        setTimeToBonusDisappear((prev) => {
-          if (prev - 1 === 0) {
-            setBonus(false)
-            clearInterval(counterBonusDisappear)
-            return null
-          }
-          return (prev -= 1)
-        }),
-      1000
-    )
-    setCounterBonusDisappearId(counterBonusDisappear)
+    setPosition(newElementPosition)
   }
 
-  const countdownBonusAppear = () => {
-    const couterBonusAppear = setInterval(
+  const counter = (setTime, bonusStatus) => {
+    const countdown = setInterval(
       () =>
-        setTimeToBonusAppear((prev) => {
+        setTime((prev) => {
           if (prev - 1 === 0) {
-            setBonus(true)
-            clearInterval(couterBonusAppear)
+            setBonus(bonusStatus)
+            clearInterval(countdown)
             return null
           }
           return (prev -= 1)
         }),
       1000
     )
-    setCounterBonusAppearId(couterBonusAppear)
+    return countdown
   }
 
   const gameElementsLoop = () => setGameLoopNum((prev) => (prev += 1))
@@ -187,7 +177,7 @@ const useSnakeLogic = () => {
     if (checkCollision(newSnakeHead)) endGame()
     if (!checkAppleCollision(snakeCopy)) snakeCopy.pop()
     if (checkBonusCollision(snakeCopy)) {
-      // console.log("cos sie dzieje po najechaniu bonusu")
+      console.log("cos sie dzieje po najechaniu bonusu")
     }
     setSnake(snakeCopy)
   }
@@ -210,8 +200,8 @@ const useSnakeLogic = () => {
   }
 
   const startGame = () => {
-    setApple(apple_start)
-    setBonusPosition([2, 9])
+    createElementPosition(bonusPosition, setApplePosition) //create apple
+    setBonusPosition([])
     setDirection(directions.ArrowRight)
     setSnake(snake_start)
     setStart(true)
@@ -249,12 +239,12 @@ const useSnakeLogic = () => {
     if (opacity <= 0) {
       setAppleCollision(false)
     }
-    setOpacity((prev) => (prev -= 0.05))
+    setOpacity((prev) => (prev -= 0.03))
   }
 
   const textAnimation = (position) => {
-    const moveX = applePosition[0] >= 17 ? -0.05 : 0.05
-    const moveY = applePosition[1] >= 3 ? -0.05 : 0.05
+    const moveX = applePosition[0] >= 17 ? -0.03 : 0.03
+    const moveY = applePosition[1] >= 3 ? -0.03 : 0.03
     position[0] += moveX
     position[1] += moveY
     return position
@@ -293,27 +283,29 @@ const useSnakeLogic = () => {
     )
       return true
 
-    for (const segment of snk) {
-      // collision snakeHead with snake body
+    // collision snakeHead with snake body
+    for (const segment of snk)
       if (piece[0] === segment[0] && piece[1] === segment[1]) {
-        // console.log("kolizja ze snejkiem")
+        console.log("kolizja ze snejkiem")
         return true
       }
-    }
-    if (piece?.[0] === compareItem?.[0] && piece?.[1] === compareItem?.[1]) {
-      //apple and bonus colision
+    //apple and bonus colision
+    if (piece?.[0] === compareItem?.[0] && piece?.[1] === compareItem?.[1])
       return true
-    }
+
     return false
   }
 
   const checkAppleCollision = (snake) => {
     const snakeHead = snake[0]
 
-    if (snakeHead[0] === apple[0] && snakeHead[1] === apple[1]) {
-      const newTextPosition = [...apple]
-      setApplePosition(apple)
-      if (apple[0] >= 18) {
+    if (
+      snakeHead[0] === applePosition[0] &&
+      snakeHead[1] === applePosition[1]
+    ) {
+      const newTextPosition = [...applePosition]
+      // setApplePosition(apple)
+      if (applePosition[0] >= 18) {
         newTextPosition[0] = 17
         setTextPosition(newTextPosition)
       } else {
@@ -324,35 +316,26 @@ const useSnakeLogic = () => {
 
       setOpacity(1)
 
-      let newApple = createElementPosition(apple)
       const randomNumber = Math.floor(Math.random() * 13)
       setFruitNumber(randomNumber)
       setScore((prev) => newScore(prev))
-
-      while (checkCollision(newApple, snake, bonus)) {
-        newApple = createElementPosition(apple)
-      }
-
-      setApple(newApple)
-
+      createElementPosition(bonusPosition, setApplePosition)
       return true
     }
   }
   const checkBonusCollision = (snake) => {
     const snakeHead = snake[0]
 
-    if (snakeHead[0] === bonus?.[0] && snakeHead[1] === bonus?.[1]) {
-      let newBonus = createElementPosition(bonusPosition)
-      while (checkCollision(newBonus, snake, apple)) {
-        newBonus = createElementPosition(bonusPosition)
-      }
-      setBonusPosition(newBonus)
-      return true
+    if (
+      snakeHead[0] === bonusPosition?.[0] &&
+      snakeHead[1] === bonusPosition?.[1]
+    ) {
+      setBonus(false)
+      // set
     }
   }
 
   const drawTopBar = (context, bonusStatus, counter) => {
-    console.log(counter, "counter w funckji topbar")
     context.fillStyle = "rgb(112, 99, 192)"
     context.strokeStyle = "rgb(112, 99, 192)"
     context.beginPath()
@@ -373,22 +356,20 @@ const useSnakeLogic = () => {
   const drawFruit = (context) => {
     const appleImage = new Image()
     appleImage.src = choseImage()
-    context.drawImage(appleImage, apple[0], apple[1], 1, 1)
+    context.drawImage(appleImage, applePosition[0], applePosition[1], 1, 1)
   }
 
   const drawBonus = (context) => {
-    console.log(bonusPosition)
     context.fillStyle = "rgb(112, 99, 192)"
     // const appleImage = new Image()
     // appleImage.src = choseImage()
     context.fillRect(bonusPosition?.[0], bonusPosition?.[1], 1, 1)
   }
 
-  const checkElementIsDrawn = (context, element) => {
-    return context
+  const checkElementIsDrawn = (context, element) =>
+    context
       .getImageData(element[0] * scale, element[1] * scale, scale, scale)
       .data.some((channel) => channel !== 0)
-  }
 
   useInterval(
     () => snakeLoop(),
@@ -398,7 +379,7 @@ const useSnakeLogic = () => {
   )
   useInterval(
     () => gameElementsLoop(),
-    firstRender ? firstRender : 70,
+    firstRender ? firstRender : 50,
     start,
     pause
   )
@@ -424,8 +405,8 @@ const useSnakeLogic = () => {
     playAgain,
     pauseGame,
     startGame,
-    apple,
-    setApple,
+    applePosition,
+    setApplePosition,
     pointsMultiplier,
     setPointsMultiplier,
     snake,
