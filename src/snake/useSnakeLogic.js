@@ -54,8 +54,9 @@ const useSnakeLogic = () => {
   const [score, setScore] = useState(0)
   const [snakeHead, setSnakeHead] = useState(null)
   const [opacity, setOpacity] = useState(1)
-  const [appleCollision, setAppleCollision] = useState(false)
-  const [textPosition, setTextPosition] = useState(applePosition)
+  const [elementCollision, setElementCollision] = useState(false)
+  const [textPosition, setTextPosition] = useState([])
+  const [startingTextPosition, setStartingTextPosition] = useState([])
 
   const [win, setWin] = useState(false)
   const [bonus, setBonus] = useState(false)
@@ -69,7 +70,9 @@ const useSnakeLogic = () => {
   const canvasRef2 = useRef()
   const canvasRef3 = useRef()
   const decimalPlaces = 1
-
+  const pointsForFruitText = `+${BASIC_POINTS * pointsMultiplier} points`
+  const fruitText = "fruit"
+  const bonusText = "bonus"
   useEffect(() => {
     if (snake.length === 378) {
       setWin(true)
@@ -107,8 +110,16 @@ const useSnakeLogic = () => {
   useEffect(() => {
     if (start) {
       const context = createContext(canvasRef3)
+      console.log(elementCollision, "elementCollision")
 
-      if (appleCollision) drawGainPointsText(context)
+      if (elementCollision) {
+        const textAfterCollison =
+          elementCollision === "fruit" ? pointsForFruitText : "bonus"
+        drawTextElementCollision(context, textAfterCollison)
+      }
+
+      // if (elementCollision)
+      //   drawTextElementCollision(context, pointsForFruitText)
       if (bonus) drawBonus(context)
 
       drawFruit(context)
@@ -165,23 +176,6 @@ const useSnakeLogic = () => {
     return context
   }
 
-  const snakeLoop = () => {
-    const snakeCopy = [...snake]
-    const snakeHead = snakeCopy[0]
-
-    const newSnakeHead = [
-      snakeHead[0] + direction[0],
-      snakeHead[1] + direction[1],
-    ]
-    snakeCopy.unshift(newSnakeHead)
-    if (checkCollision(newSnakeHead)) endGame()
-    if (!checkAppleCollision(snakeCopy)) snakeCopy.pop()
-    if (checkBonusCollision(snakeCopy)) {
-      console.log("cos sie dzieje po najechaniu bonusu")
-    }
-    setSnake(snakeCopy)
-  }
-
   const drawSnake = (context) => {
     context.fillStyle = "rgb(112, 99, 192)"
     snake.forEach(([x, y]) => {
@@ -227,24 +221,20 @@ const useSnakeLogic = () => {
 
   const choseImage = () => images[fruitNumber]
 
-  const drawGainPointsText = (context) => {
+  const drawTextElementCollision = (context, text) => {
     context.font = `${24 / scale}px Arial`
     context.fillStyle = `rgba(76, 175, 80, ${opacity})`
-    context.fillText(
-      `+${BASIC_POINTS * pointsMultiplier} points`,
-      textPosition?.[0],
-      textPosition?.[1]
-    )
+    context.fillText(text, textPosition?.[0], textPosition?.[1])
+
+    if (opacity <= 0) setElementCollision(false)
+
     setTextPosition((prev) => textAnimation(prev))
-    if (opacity <= 0) {
-      setAppleCollision(false)
-    }
     setOpacity((prev) => (prev -= 0.03))
   }
 
   const textAnimation = (position) => {
-    const moveX = applePosition[0] >= 17 ? -0.03 : 0.03
-    const moveY = applePosition[1] >= 3 ? -0.03 : 0.03
+    const moveX = startingTextPosition[0] === 17 ? -0.03 : 0.03
+    const moveY = startingTextPosition[1] >= 3 ? -0.03 : 0.03
     position[0] += moveX
     position[1] += moveY
     return position
@@ -286,7 +276,6 @@ const useSnakeLogic = () => {
     // collision snakeHead with snake body
     for (const segment of snk)
       if (piece[0] === segment[0] && piece[1] === segment[1]) {
-        console.log("kolizja ze snejkiem")
         return true
       }
     //apple and bonus colision
@@ -296,43 +285,80 @@ const useSnakeLogic = () => {
     return false
   }
 
-  const checkAppleCollision = (snake) => {
+  const checkElementCollision = (
+    snake,
+    elementPosition,
+    elementCollisionText,
+    setFruitNumber,
+    elementToCompare,
+    setPosition,
+    setBonus
+  ) => {
     const snakeHead = snake[0]
 
     if (
-      snakeHead[0] === applePosition[0] &&
-      snakeHead[1] === applePosition[1]
+      snakeHead[0] === elementPosition[0] &&
+      snakeHead[1] === elementPosition[1]
     ) {
-      const newTextPosition = [...applePosition]
-      // setApplePosition(apple)
-      if (applePosition[0] >= 18) {
+      const randomNumber = Math.floor(Math.random() * 13)
+      const newTextPosition = [...elementPosition]
+      const newStartingTextPosition = [...snakeHead]
+
+      if (elementPosition[0] >= 18) {
         newTextPosition[0] = 17
-        setTextPosition(newTextPosition)
-      } else {
-        setTextPosition(newTextPosition)
+        newStartingTextPosition[0] = 17
+      }
+      if (elementCollisionText === "fruit") {
+        createElementPosition(elementToCompare, setPosition)
       }
 
-      setAppleCollision(true)
-
+      setElementCollision(elementCollisionText)
+      setTextPosition(newTextPosition)
+      setStartingTextPosition(newStartingTextPosition)
       setOpacity(1)
 
-      const randomNumber = Math.floor(Math.random() * 13)
-      setFruitNumber(randomNumber)
+      if (setFruitNumber) setFruitNumber(randomNumber)
       setScore((prev) => newScore(prev))
-      createElementPosition(bonusPosition, setApplePosition)
+      if (setBonus) setBonus(false)
       return true
     }
   }
-  const checkBonusCollision = (snake) => {
-    const snakeHead = snake[0]
+  const snakeLoop = () => {
+    const snakeCopy = [...snake]
+    const snakeHead = snakeCopy[0]
+
+    const newSnakeHead = [
+      snakeHead[0] + direction[0],
+      snakeHead[1] + direction[1],
+    ]
+    snakeCopy.unshift(newSnakeHead)
+    if (checkCollision(newSnakeHead)) endGame()
+    if (
+      !checkElementCollision(
+        snakeCopy,
+        applePosition,
+        fruitText,
+        setFruitNumber,
+        bonusPosition,
+        setApplePosition
+      )
+    )
+      snakeCopy.pop()
 
     if (
-      snakeHead[0] === bonusPosition?.[0] &&
-      snakeHead[1] === bonusPosition?.[1]
+      checkElementCollision(
+        snakeCopy,
+        bonusPosition,
+        bonusText,
+        false,
+        bonusPosition,
+        setApplePosition,
+        setBonus
+      )
     ) {
-      setBonus(false)
-      // set
+      console.log("cos sie dzieje po najechaniu bonusu")
     }
+    setSnake(snakeCopy)
   }
 
   const drawTopBar = (context, bonusStatus, counter) => {
@@ -379,7 +405,7 @@ const useSnakeLogic = () => {
   )
   useInterval(
     () => gameElementsLoop(),
-    firstRender ? firstRender : 50,
+    firstRender ? firstRender : 80,
     start,
     pause
   )
@@ -397,7 +423,7 @@ const useSnakeLogic = () => {
     setWin(false)
     setTextPosition(null)
     setFirstRender(1)
-    setAppleCollision(false)
+    setElementCollision(false)
   }
 
   return {
