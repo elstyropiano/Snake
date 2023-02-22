@@ -34,6 +34,36 @@ const CanvasElements = styled("canvas")(
     background-color: rgb(7, 13, 38); */
   `
 )
+const CanvasKey = styled("canvas")(
+  css`
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 5;
+    /* border: 3px solid rgb(112, 99, 192);
+    background-color: rgb(7, 13, 38); */
+  `
+)
+const CanvasSparkle = styled("canvas")(
+  css`
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 2;
+    /* border: 3px solid rgb(112, 99, 192);
+    background-color: rgb(7, 13, 38); */
+  `
+)
+const CanvasBoom = styled("canvas")(
+  css`
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 3;
+    /* border: 3px solid rgb(112, 99, 192);
+    background-color: rgb(7, 13, 38); */
+  `
+)
 const GameWrapper = styled("div")(
   css`
     width: 800px;
@@ -72,6 +102,9 @@ const Snake = () => {
     canvasRef1,
     canvasRef2,
     canvasRef3,
+    canvasRef4,
+    canvasRef5,
+    canvasRef6,
     setPointsMultiplier,
     setSpeed,
     startGame,
@@ -96,10 +129,25 @@ const Snake = () => {
                 height={canvasSize[1]}
                 ref={canvasRef2}
               />
-              <CanvasTopBar
+              <CanvasElements
                 width={canvasSize[0]}
                 height={canvasSize[1]}
                 ref={canvasRef3}
+              />
+              <CanvasSparkle
+                width={canvasSize[0]}
+                height={canvasSize[1]}
+                ref={canvasRef4}
+              />
+              <CanvasKey
+                width={canvasSize[0]}
+                height={canvasSize[1]}
+                ref={canvasRef5}
+              />
+              <CanvasBoom
+                width={canvasSize[0]}
+                height={canvasSize[1]}
+                ref={canvasRef6}
               />
             </>
           )}
