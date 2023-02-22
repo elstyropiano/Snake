@@ -11,6 +11,7 @@ export function useInterval(callback, delay, start, pause) {
     function tick() {
       savedCallback.current()
     }
+    // console.log("odplaa sie")
     if (delay !== null && start && !pause) {
       let id = setInterval(tick, delay)
 
