@@ -12,6 +12,7 @@ const CanvasSnake = styled("canvas")(
     position: absolute;
     top: 0;
     left: 0;
+    z-index: 4;
   `
 )
 const CanvasTopBar = styled("canvas")(
@@ -29,7 +30,7 @@ const CanvasElements = styled("canvas")(
     position: absolute;
     top: 0;
     left: 0;
-    z-index: 1;
+    z-index: 3;
     /* border: 3px solid rgb(112, 99, 192);
     background-color: rgb(7, 13, 38); */
   `
@@ -49,7 +50,7 @@ const CanvasSparkle = styled("canvas")(
     position: absolute;
     top: 0;
     left: 0;
-    z-index: 2;
+    z-index: 8;
     /* border: 3px solid rgb(112, 99, 192);
     background-color: rgb(7, 13, 38); */
   `
@@ -59,7 +60,28 @@ const CanvasBoom = styled("canvas")(
     position: absolute;
     top: 0;
     left: 0;
-    z-index: 3;
+    z-index: 11;
+    /* border: 3px solid rgb(112, 99, 192);
+    background-color: rgb(7, 13, 38); */
+  `
+)
+const CanvasClear = styled("canvas")(
+  css`
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 5;
+    /* border: 3px solid rgb(112, 99, 192);
+    background-color: rgb(7, 13, 38); */
+  `
+)
+
+const CanvasTeleport = styled("canvas")(
+  css`
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 6;
     /* border: 3px solid rgb(112, 99, 192);
     background-color: rgb(7, 13, 38); */
   `
@@ -90,6 +112,13 @@ const Wrapper = styled("div")(
   `
 )
 
+// const StyledGameOver = styled(GameOver)(
+//   ({ opacity }) =>
+//     css`
+//       opacity: 0;
+//     `
+// )
+
 const Snake = () => {
   const {
     pointsMultiplier,
@@ -105,6 +134,8 @@ const Snake = () => {
     canvasRef4,
     canvasRef5,
     canvasRef6,
+    canvasRef7,
+    canvasRef8,
     setPointsMultiplier,
     setSpeed,
     startGame,
@@ -149,6 +180,21 @@ const Snake = () => {
                 height={canvasSize[1]}
                 ref={canvasRef6}
               />
+              <CanvasClear
+                width={canvasSize[0]}
+                height={canvasSize[1]}
+                ref={canvasRef7}
+              />
+              <CanvasTeleport
+                width={canvasSize[0]}
+                height={canvasSize[1]}
+                ref={canvasRef8}
+              />
+              {/* <CanvasBonus
+                width={canvasSize[0]}
+                height={canvasSize[1]}
+                ref={canvasRef9}
+              /> */}
             </>
           )}
           <Wrapper>

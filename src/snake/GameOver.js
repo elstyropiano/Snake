@@ -7,9 +7,28 @@ const StyledTypography = styled(Typography)(
       margin-bottom: 30px;
     `
 )
+const Wrapper = styled("div")(
+  css`
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    opacity: 0;
+    animation: fadeIn 2s forwards;
 
-const GameOver = ({ score, playAgain, win }) => (
-  <>
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+  `
+)
+
+const GameOver = ({ score, playAgain, win, opacity }) => (
+  <Wrapper>
     <StyledTypography variant='h2'>
       {win ? "You Win!" : "Game Over"}
     </StyledTypography>
@@ -30,7 +49,7 @@ const GameOver = ({ score, playAgain, win }) => (
     <Button color='success' variant='contained' onClick={playAgain}>
       YES
     </Button>
-  </>
+  </Wrapper>
 )
 
 export default GameOver
