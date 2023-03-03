@@ -36,6 +36,10 @@ import key from "./images/bonuses/door/key.png"
 import doorClosed from "./images/bonuses/door/door_closed.png"
 import doorOpened from "./images/bonuses/door/door_opened.png"
 import boom from "./images/collision/boom.png"
+import teleportImg from "./images/teleport/teleport.png"
+import cave from "./hole/cave.png"
+import spiderWeb from "./hole/spiderWeb.png"
+import muffin from "./images/muffin.png"
 import { useInterval } from "./useInterval"
 
 const images = [
@@ -70,11 +74,10 @@ const bonuses = [
     img: [doorOpened, doorClosed],
     text: ["You open doors", "You crash with doors"],
   },
-  // { img: , text: "you got the key" },
 ]
 
 const useSnakeLogic = () => {
-  const [applePosition, setApplePosition] = useState([])
+  const [fruitPosition, setFruitPosition] = useState([])
   const [bonusPosition, setBonusPosition] = useState([])
   const [pointsMultiplier, setPointsMultiplier] = useState(5)
   const [snake, setSnake] = useState(snake_start)
@@ -91,27 +94,35 @@ const useSnakeLogic = () => {
   const [elementCollision, setElementCollision] = useState(false)
   const [textPosition, setTextPosition] = useState([])
   const [startingTextPosition, setStartingTextPosition] = useState([])
-  const [imgColumn, setImgColumn] = useState(0)
-  const [imgRow, setImgRow] = useState(0)
+  const [sparkleColumn, setSparkleColumn] = useState(0)
+  const [sparkleRow, setSparkleRow] = useState(0)
   const [sparkleAnimation, setSparkleAnimation] = useState(0)
   const [crashAnimation, setCrashAnimation] = useState(0)
   const [elementAnimation, setElementAnimation] = useState(0)
   const [sparkleAnimationId, setSparkleAnimationId] = useState(null)
-  const [elementLoopId, setElementLoopId] = useState(null)
-  const [crashAnimationId, setCrashAnimationId] = useState(null)
-  const [keyAmount, setKeyAmout] = useState(0)
 
+  const [crashAnimationId, setCrashAnimationId] = useState(null)
+  const [snakeLength, setSnakeLength] = useState(null)
+  const [keyAmount, setKeyAmout] = useState(0)
+  const [crashWithNoWall, setCrashWithNotWall] = useState(false)
+  const [snakeDisappear, setSnakeDisappear] = useState(false)
+  const [fruitsArray, setFruitsArray] = useState([])
   const [win, setWin] = useState(false)
   const [bonus, setBonus] = useState(false)
-
+  const [bonusArea, setBonusArea] = useState(false)
   const [crashColumn, setCrashColumn] = useState(0)
   const [crashRow, setCrashRow] = useState(0)
+  const [teleportColumn, setTeleportColumn] = useState(0)
+  const [teleportRow, setTeleportRow] = useState(0)
+  const [teleportAnimation, setTeleportAnimation] = useState(0)
+  const [telportAnimationId, setTeleportAnimationId] = useState(null)
 
-  const [gameLoopNum, setGameLoopNum] = useState(0)
   const [timeToBonusAppear, setTimeToBonusAppear] = useState(null)
   const [timeToBonusDisappear, setTimeToBonusDisappear] = useState(null)
   const [counterBonusDisappearId, setCounterBonusDisappearId] = useState(null)
   const [counterBonusAppearId, setCounterBonusAppearId] = useState(null)
+  const [teleportNumber, setTeleportNumber] = useState(0)
+
   const [bonusNumber, setBonusNumber] = useState(null)
   const canvasRef1 = useRef()
   const canvasRef2 = useRef()
@@ -119,101 +130,123 @@ const useSnakeLogic = () => {
   const canvasRef4 = useRef()
   const canvasRef5 = useRef()
   const canvasRef6 = useRef()
+  const canvasRef7 = useRef()
+  const canvasRef8 = useRef()
   const decimalPlaces = 1
   const pointsForFruit = `+ ${BASIC_POINTS * pointsMultiplier} points`
   const fruitText = "fruit"
   const bonusText = "bonus"
-  const cutedImageWidth = 64
-  const cutedImageHeight = 64
-  // const crashCutedImageWidth = 128
-  // const crashCutedImageHeight = 128
+  const imageSWidth = 64
+  const imageSHeight = 64
+  const teleportSWidth = 192
+  const teleportSHeight = 192
+  const teleportInCavePosition = [4, 4]
 
   useEffect(() => {
-    if (snake.length === 378) {
-      setWin(true)
-      setStart(false)
-      setGameOver(true)
-      return
-    }
     if (start) {
       const context = createContext(canvasRef1)
+      if (snakeDisappear) return
+      if (snake.length === 378) {
+        setWin(true)
+        setStart(false)
+        setGameOver(true)
+        return
+      }
       const snakeHead = snake[0]
       drawSnake(context)
       if (crashAnimation > 1) return
 
       if (checkElementIsDrawn(context, snakeHead)) setFirstRender(null)
     }
-  }, [snake, crashAnimation])
+  }, [snake, crashAnimation, snakeDisappear, pause])
 
   useEffect(() => {
+    if (crashWithNoWall) {
+      return
+    }
     if (start) {
       if (bonus) {
         const randomNum = generateRandomNum(3, 5)
-        createElementPosition(applePosition, setBonusPosition)
+        createElementPosition(fruitPosition, setBonusPosition)
+        setBonusPosition([0, 19])
         setTimeToBonusDisappear(randomNum)
         const counterId = counter(setTimeToBonusDisappear, false)
         setCounterBonusDisappearId(counterId)
-        let randomNumBonus
-        do {
-          randomNumBonus = generateRandomNum(6, 0)
-        } while (randomNumBonus === 4 && keyAmount === 1)
-
-        setBonusNumber(randomNumBonus)
-        if (!(randomNumBonus === 5 && keyAmount === 0)) loopForSparkle()
+        randomBonusNumber()
 
         return
       }
+
       const randomNum = generateRandomNum(2, 5)
       setTimeToBonusAppear(randomNum)
       const counterId = counter(setTimeToBonusAppear, true)
       setCounterBonusAppearId(counterId)
     }
-  }, [bonus, start])
+  }, [bonus, start, crashWithNoWall])
 
   useEffect(() => {
     if (start) {
+      if (bonusArea) {
+        createRadomFruitsArray()
+
+        setTimeout(() => {
+          setSnakeDisappear(false)
+          setPause(false)
+          elementsLoop()
+        }, 1500)
+      }
+      if (!bonusArea) {
+        console.log()
+        createElementPosition(bonusPosition, setFruitPosition)
+      }
+    }
+  }, [bonusArea])
+  useEffect(() => {
+    if (start) {
       const context = createContext(canvasRef3)
-      const contextKey = createContext(canvasRef5)
+      const contextText = createContext(canvasRef5)
+      if (bonusArea) {
+        if (teleportNumber === 0) {
+          teleportAnimationLoop()
+          setTeleportNumber(1)
+        }
+        drawSpiderWeb(context)
+        drawCave(context)
+        drawBonusAreaCakes(context)
+      }
+      if (!bonusArea) {
+        if (bonus) drawBonus(context)
+        drawFruit(context)
+      }
+      drawKeyOnTopBar(contextText)
       if (elementCollision) {
         elementCollision === "fruit"
-          ? drawTextElementCollision(context, pointsForFruit)
-          : drawTextElementCollision(context, bonuses[bonusNumber].text)
+          ? drawTextElementCollision(contextText, pointsForFruit)
+          : drawTextElementCollision(contextText, bonuses[bonusNumber].text)
       }
-
-      if (bonus) {
-        drawBonus(context)
-      }
-      drawKeyOnTopBar(contextKey)
-      drawFruit(context)
     }
-  }, [elementAnimation])
+  }, [elementAnimation, bonusArea])
 
   useEffect(() => {
     if (start) {
       const context = createContext(canvasRef4)
-      if (bonus) {
-        setImgColumn((prev) => {
-          if (prev + 1 > 2) {
-            setImgRow((prev) => {
-              if (prev + 1 > 2) {
-                return 0
-              }
-              return (prev += 1)
-            })
-            return 0
-          }
-          return (prev += 1)
-        })
-        console.log(imgRow, "imgRow")
-        console.log(imgColumn, "imgColumn")
-        drawSparkle(context)
 
-        return
+      if (snakeDisappear) return
+      if (!bonus) clearInterval(sparkleAnimationId)
+      if (bonus) {
+        setSparkleImageRowsAndColumns()
+        drawSparkle(context)
       }
-      clearInterval(sparkleAnimationId)
-      setBonusPosition(null)
     }
-  }, [sparkleAnimation, bonus])
+  }, [sparkleAnimation, bonus, snakeDisappear])
+
+  useEffect(() => {
+    if (start) {
+      const context = createContext(canvasRef8)
+      setTeleportImageRowsAndColumns()
+      drawTeleport(context)
+    }
+  }, [teleportAnimation])
 
   useEffect(() => {
     if (start) {
@@ -229,25 +262,62 @@ const useSnakeLogic = () => {
   useEffect(() => {
     if (start) {
       const context = createContext(canvasRef6)
-
-      setCrashColumn((prev) => {
-        if (prev + 1 > 7) {
-          setCrashRow((prev) => {
-            if (prev + 1 > 3) {
-              clearInterval(crashAnimationId)
-            }
-            return (prev += 1)
-          })
-          return 0
-        }
-        return (prev += 1)
-      })
-
+      setCrashImageRowsAndColumns()
       drawCrashAnimation(context)
-
-      return
     }
   }, [crashAnimation])
+
+  const setCrashImageRowsAndColumns = () =>
+    setCrashColumn((prev) => {
+      if (prev + 1 > 7) {
+        setCrashRow((prev) => {
+          if (prev + 1 > 3) {
+            clearInterval(crashAnimationId)
+            endGame()
+          }
+          return (prev += 1)
+        })
+        return 0
+      }
+      return (prev += 1)
+    })
+
+  const setSparkleImageRowsAndColumns = () =>
+    setSparkleColumn((prev) => {
+      if (prev + 1 > 2) {
+        setSparkleRow((prev) => {
+          if (prev + 1 > 2) return 0
+          return (prev += 1)
+        })
+        return 0
+      }
+      return (prev += 1)
+    })
+
+  const setTeleportImageRowsAndColumns = () =>
+    setTeleportColumn((prev) => {
+      if (prev + 1 > 4) {
+        setTeleportRow((prev) => {
+          if (prev + 1 > 7) {
+            if (!bonusArea) {
+              clearInterval(telportAnimationId)
+              setBonusPosition(null)
+
+              setSnakeDisappear(true)
+              setBonusArea(true)
+              setSnakeLength(snake.length)
+              setDirection(directions.ArrowRight)
+              setSnake([[4, 4]])
+            }
+            clearInterval(telportAnimationId)
+            return 0
+          }
+          return (prev += 1)
+        })
+        return 0
+      }
+      return (prev += 1)
+    })
 
   const createElementPosition = (elementToCompare, setPosition) => {
     let newElementPosition
@@ -262,6 +332,38 @@ const useSnakeLogic = () => {
 
     setPosition(newElementPosition)
   }
+  const createRadomFruitsArray = () => {
+    let fruitsArray = []
+    let newElementPosition
+    const arr = ["", ""]
+    for (let i = 0; i < 10; i++) {
+      do {
+        newElementPosition = arr.map((_, i) =>
+          i === 1
+            ? generateRandomNum((canvasSize[i] - 40) / scale, 1)
+            : generateRandomNum(canvasSize[i] / scale, 0)
+        )
+      } while (checkFruitPositionExsist(newElementPosition, fruitsArray))
+
+      fruitsArray.push(newElementPosition)
+    }
+
+    setFruitsArray(fruitsArray)
+  }
+
+  const checkFruitPositionExsist = (newElementPosition, fruitsArray) => {
+    for (let i = 0; i < fruitsArray.length; i++) {
+      if (
+        newElementPosition[0] === fruitsArray[i][0] &&
+        newElementPosition[1] === fruitsArray[i][1]
+      )
+        return true
+      if (newElementPosition[0] === 4 && newElementPosition[0] === 4) {
+        return true
+      }
+    }
+    return false
+  }
 
   const counter = (setTime, bonusStatus) => {
     const id = setInterval(
@@ -269,6 +371,11 @@ const useSnakeLogic = () => {
         setTime((prev) => {
           if (prev - 1 === 0) {
             setBonus(bonusStatus)
+            if (!bonusStatus) {
+              setSnakeDisappear(false)
+              setBonusArea(false)
+              setTeleportNumber(0)
+            }
             clearInterval(id)
             return null
           }
@@ -279,23 +386,18 @@ const useSnakeLogic = () => {
     return id
   }
 
-  // const gameElementsLoop = () => setGameLoopNum((prev) => (prev += 1))
-
-  const createContext = (ref, text) => {
+  const createContext = (ref) => {
     const context = ref.current.getContext("2d")
-    if (!text) {
-      context.clearRect(0, 0, canvasSize[0], canvasSize[1])
-    }
-
+    context.clearRect(0, 0, canvasSize[0], canvasSize[1])
     context.setTransform(scale, 0, 0, scale, 0, 0)
-
     return context
   }
 
   const drawSnake = (context) => {
-    if (crashAnimation === 1) {
+    if (crashAnimation === 1 && !crashWithNoWall) {
       snake.shift()
     }
+
     context.fillStyle = "rgb(112, 99, 192)"
     snake.forEach(([x, y]) => {
       context.beginPath()
@@ -310,18 +412,27 @@ const useSnakeLogic = () => {
       context.fill()
       // context.fillRect(x, y, 1, 1, 1)
     })
-    // if (crashAnimation > 0) {
-    //   set
-    // }
   }
+  const randomBonusNumber = () => {
+    let randomNumBonus
+    do {
+      randomNumBonus = generateRandomNum(6, 0)
+      console.log(randomNumBonus, "randomNumBonus")
+    } while (randomNumBonus === 4 && keyAmount === 1)
 
+    setBonusNumber(5)
+    setKeyAmout(1)
+
+    if (!(randomNumBonus === 5 && keyAmount === 0)) loopForSparkle()
+  }
   const startGame = () => {
-    createElementPosition(bonusPosition, setApplePosition) //create apple
+    createElementPosition(bonusPosition, setFruitPosition)
     setBonusPosition([])
     setDirection(directions.ArrowRight)
     setSnake(snake_start)
     setStart(true)
     elementsLoop()
+    setTeleportNumber(0)
   }
 
   const pauseGame = () => {
@@ -334,13 +445,18 @@ const useSnakeLogic = () => {
       : counterBonusAppearId
     clearInterval(intervalToStopId)
   }
+
   const endGame = () => {
+    setCrashWithNotWall(false)
     stopCounter()
     setGameOver(true)
     setSpeed(10)
     setStart(false)
-
+    setPause(false)
+    setCrashAnimation(0)
     setBonus(false)
+    setCrashRow(0)
+    setCrashColumn(0)
   }
   const checkBonusImgIsArray = () => {
     const bonusImg = bonuses[bonusNumber]?.img
@@ -357,7 +473,6 @@ const useSnakeLogic = () => {
           : bonuses[bonusNumber]?.img[1]
       return doorKind
     }
-
     return bonuses[bonusNumber]?.img
   }
 
@@ -370,24 +485,6 @@ const useSnakeLogic = () => {
 
     setTextPosition((prev) => textAnimation(prev))
     setOpacity((prev) => (prev -= 0.005))
-  }
-  const drawCrashAnimation = (context) => {
-    const crashImage = new Image()
-    crashImage.src = boom
-
-    context.drawImage(
-      crashImage,
-      cutedImageWidth * crashColumn,
-      cutedImageHeight * crashRow,
-      cutedImageWidth,
-      cutedImageHeight,
-      snake?.[0][0] - 1,
-      snake?.[0][1] - 1,
-      3,
-      3
-    )
-    // console.log(snake, "snake w drawCrashAnimation")
-    // +
   }
 
   const textAnimation = (position) => {
@@ -434,6 +531,7 @@ const useSnakeLogic = () => {
     // collision snakeHead with snake body
     for (const segment of snk)
       if (piece[0] === segment[0] && piece[1] === segment[1]) {
+        setCrashWithNotWall(true)
         return true
       }
     //apple and bonus colision
@@ -443,22 +541,28 @@ const useSnakeLogic = () => {
     return false
   }
 
-  const checkElementCollision = (
-    snake,
-    elementPosition,
-    elementCollisionText,
-    setFruitNumber,
-    elementToCompare,
-    setPosition,
-    setBonus
-  ) => {
+  const checkElementCollision = (snake, elementPosition, elementType) => {
+    if (bonusArea) return false
     const snakeHead = snake[0]
 
     if (
       snakeHead[0] === elementPosition?.[0] &&
       snakeHead[1] === elementPosition?.[1]
     ) {
-      const randomNum = generateRandomNum(19, 0)
+      if (elementType === "fruit") {
+        const randomNum = generateRandomNum(19, 0)
+        setFruitNumber(randomNum)
+        setScore((prev) => newScore(prev))
+        createElementPosition(bonusPosition, setFruitPosition)
+      }
+      if (elementType === "bonus") {
+        if (!(bonusNumber === 5 && keyAmount === 1)) setBonus(false)
+        if (bonusNumber <= 3)
+          setScore((prev) => (prev += bonuses[bonusNumber].points))
+        if (bonusNumber === 4) setKeyAmout(1)
+        if (bonusNumber === 5 && keyAmount === 1) openDoorCollision()
+      }
+
       const newTextPosition = [...elementPosition]
       const newStartingTextPosition = [...snakeHead]
 
@@ -466,26 +570,45 @@ const useSnakeLogic = () => {
         newTextPosition[0] = 17
         newStartingTextPosition[0] = 17
       }
-      if (elementCollisionText === "fruit") {
-        createElementPosition(elementToCompare, setPosition)
-      }
-
-      setElementCollision(elementCollisionText)
+      setElementCollision(elementType)
       setTextPosition(newTextPosition)
       setStartingTextPosition(newStartingTextPosition)
       setOpacity(1)
-
-      if (setFruitNumber) {
-        setFruitNumber(randomNum)
-        setScore((prev) => newScore(prev))
-      }
-      if (setBonus) {
-        setBonus(false)
-        // setBonusPosition(null)
-      }
       return true
     }
+    return false
   }
+
+  const openDoorCollision = () => {
+    stopCounter()
+    setKeyAmout(0)
+    setPause(true)
+    teleportAnimationLoop()
+    setTimeout(() => {
+      setTimeToBonusDisappear(15)
+      const counterId = counter(setTimeToBonusDisappear, false)
+      setCounterBonusDisappearId(counterId)
+    }, 3000)
+  }
+
+  const checkCollisionWithBonusAreaFruit = (newSnakeHead) => {
+    const newArray = fruitsArray.filter(([fruitX, fruitY]) => {
+      if (newSnakeHead[0] === fruitX && newSnakeHead[1] === fruitY) {
+        const newTextPosition = [fruitX, fruitY]
+        const newStartingTextPosition = [...newSnakeHead]
+        setScore((prev) => newScore(prev))
+        setElementCollision(fruitText)
+        setTextPosition(newTextPosition)
+        setStartingTextPosition(newStartingTextPosition)
+        setOpacity(1)
+        return false
+      }
+      return true
+    })
+
+    setFruitsArray(newArray)
+  }
+
   const snakeLoop = () => {
     const snakeCopy = [...snake]
     const snakeHead = snakeCopy[0]
@@ -494,125 +617,32 @@ const useSnakeLogic = () => {
       snakeHead[0] + direction[0],
       snakeHead[1] + direction[1],
     ]
+
     snakeCopy.unshift(newSnakeHead)
-    if (checkCollision(newSnakeHead)) {
-      console.log(snake, "snake")
+
+    if (bonusArea) checkCollisionWithBonusAreaFruit(newSnakeHead)
+
+    if (!checkElementCollision(snake, fruitPosition, fruitText)) snakeCopy.pop()
+
+    if (bonusArea) {
+      if (snakeLength > snake.length) {
+        setSnake([...snakeCopy, [4, 4]])
+        return
+      }
+    }
+
+    const bonusCollision = checkElementCollision(
+      snake,
+      bonusPosition,
+      bonusText
+    )
+    if (checkCollision(newSnakeHead) && !bonusCollision) {
       setPause(true)
       crashAnimationLoop()
       stopCounter()
-
-      // endGame()
     }
-    if (
-      checkElementCollision(
-        snakeCopy,
-        bonusPosition,
-        bonusText,
-        false,
-        bonusPosition,
-        setApplePosition,
-        setBonus
-      )
-    ) {
-      clearInterval(counterBonusDisappearId)
-      if (bonusNumber === 4) setKeyAmout(1)
-      else if (bonusNumber === 5) setKeyAmout(0)
-      else setScore((prev) => (prev += bonuses[bonusNumber].points))
-    }
-
-    if (
-      !checkElementCollision(
-        snakeCopy,
-        applePosition,
-        fruitText,
-        setFruitNumber,
-        bonusPosition,
-        setApplePosition
-      )
-    )
-      snakeCopy.pop()
 
     setSnake(snakeCopy)
-  }
-  const drawKeyOnTopBar = (context) => {
-    const keyImage = new Image()
-    keyImage.src = key
-    context.drawImage(
-      keyImage,
-      canvasSize[0] / scale - 250 / scale,
-      4 / scale,
-      0.6,
-      0.6
-    )
-  }
-  const drawTopBar = (context, bonusStatus, counter) => {
-    context.fillStyle = "rgb(112, 99, 192)"
-    context.strokeStyle = "rgb(112, 99, 192)"
-    context.beginPath()
-    context.moveTo(0, 37 / scale)
-    context.lineTo(canvasSize[0] / scale, 37 / scale)
-    context.lineWidth = 3 / scale
-    context.stroke()
-    context.font = `${25 / scale}px Arial`
-    context.fillText(`Snake speed: ${speed}%`, 20 / scale, 25 / scale)
-    context.fillText(`Bonus ${bonusStatus}: ${counter}s`, 7, 25 / scale)
-    context.fillText(
-      `Score  ${score}`,
-      canvasSize[0] / scale - 150 / scale,
-      25 / scale
-    )
-
-    context.fillText(
-      `: ${keyAmount}`,
-      canvasSize[0] / scale - 220 / scale,
-      25 / scale
-    )
-  }
-
-  const drawFruit = (context) => {
-    const appleImage = new Image()
-    appleImage.src = choseImage("fruits")
-    context.drawImage(appleImage, applePosition[0], applePosition[1], 1, 1)
-  }
-
-  const drawBonus = (context) => {
-    let moveX = 0
-    let bonusWidth = 1
-    const bonusHeight = 1
-    const bonusImage = new Image()
-    bonusImage.src = choseImage()
-    const bonusImgIsArray = checkBonusImgIsArray()
-
-    if (bonusImgIsArray && keyAmount === 0) {
-      moveX = 0.25
-      bonusWidth = 0.75
-    }
-
-    context.drawImage(
-      bonusImage,
-      bonusPosition?.[0] + moveX,
-      bonusPosition?.[1],
-      bonusWidth,
-      bonusHeight
-    )
-  }
-
-  const drawSparkle = (context) => {
-    console.log(imgColumn, "imgColumn w draw sprakle")
-    console.log(imgRow, "imgRow  w draw sprakle")
-    const sparkleImage = new Image()
-    sparkleImage.src = sparkle
-    context.drawImage(
-      sparkleImage,
-      cutedImageWidth * imgColumn,
-      cutedImageWidth * imgRow,
-      cutedImageWidth,
-      cutedImageHeight,
-      bonusPosition?.[0] - 0.5,
-      bonusPosition?.[1] - 0.5,
-      2,
-      2
-    )
   }
 
   const checkElementIsDrawn = (context, element) =>
@@ -629,12 +659,6 @@ const useSnakeLogic = () => {
     start,
     pause
   )
-  // useInterval(
-  //   () => gameElementsLoop(),
-  //   firstRender ? firstRender : 60,
-  //   start,
-  //   pause
-  // )
 
   const loopForSparkle = () => {
     const id = setInterval(() => setSparkleAnimation((prev) => (prev += 1)), 90)
@@ -645,12 +669,16 @@ const useSnakeLogic = () => {
     setCrashAnimationId(id)
   }
 
-  const elementsLoop = () => {
-    const id = setInterval(() =>
-      setElementAnimation((prev) => (prev += 1), 200)
+  const teleportAnimationLoop = () => {
+    const id = setInterval(
+      () => setTeleportAnimation((prev) => (prev += 1)),
+      80
     )
-    setElementLoopId(id)
+    setTeleportAnimationId(id)
   }
+
+  const elementsLoop = () =>
+    setInterval(() => setElementAnimation((prev) => (prev += 1), 200))
 
   const playAgain = () => {
     setStart(false)
@@ -665,43 +693,201 @@ const useSnakeLogic = () => {
     setFirstRender(1)
     setElementCollision(false)
     setKeyAmout(0)
+    setBonusArea(false)
+  }
+  //Draw functions - start
+
+  const drawImage = (context, imageSrc, dx, dy, dWidth, dHeight) => {
+    const image = new Image()
+    image.src = imageSrc
+    context.drawImage(image, dx, dy, dWidth, dHeight)
   }
 
+  const drawTopBar = (context, bonusStatus, counter) => {
+    context.font = `${25 / scale}px Arial`
+    drawTopDivider(context)
+    drawSnakeSpeed(context)
+    drawCounter(context, bonusStatus, counter)
+    drawKeyAmount(context)
+    drawScore(context)
+  }
+  const drawTopDivider = (context) => {
+    context.fillStyle = "rgb(112, 99, 192)"
+    context.strokeStyle = "rgb(112, 99, 192)"
+    context.beginPath()
+    context.moveTo(0, 37 / scale)
+    context.lineTo(canvasSize[0] / scale, 37 / scale)
+    context.lineWidth = 3 / scale
+    context.stroke()
+  }
+
+  const drawSnakeSpeed = (context) =>
+    context.fillText(`Snake speed: ${speed}%`, 20 / scale, 25 / scale)
+
+  const drawCounter = (context, bonusStatus, counter) =>
+    context.fillText(`Bonus ${bonusStatus}: ${counter}s`, 7, 25 / scale)
+
+  const drawScore = (context) =>
+    context.fillText(
+      `Score  ${score}`,
+      canvasSize[0] / scale - 150 / scale,
+      25 / scale
+    )
+
+  const drawKeyAmount = (context) =>
+    context.fillText(
+      `: ${keyAmount}`,
+      canvasSize[0] / scale - 220 / scale,
+      25 / scale
+    )
+
+  const drawBonus = (context) => {
+    const bonuImg = choseImage()
+    const bonusImgIsArray = checkBonusImgIsArray()
+    const bonusHeight = 1
+    let moveX = 0
+    let bonusWidth = 1
+
+    if (bonusImgIsArray && keyAmount === 0) {
+      moveX = 0.25
+      bonusWidth = 0.75
+    }
+
+    const dx = bonusPosition?.[0] + moveX
+    const dy = bonusPosition?.[1]
+
+    drawImage(context, bonuImg, dx, dy, bonusWidth, bonusHeight)
+  }
+
+  const drawCave = (context) => drawImage(context, cave, 3.5, 3.5, 2, 2)
+
+  const drawFruit = (context) => {
+    const fruitImage = choseImage("fruits")
+    drawImage(context, fruitImage, fruitPosition[0], fruitPosition[1], 1, 1)
+  }
+  const drawSpiderWeb = (context) => drawImage(context, spiderWeb, 0, 0, 20, 20)
+
+  const drawBonusAreaCakes = (context) =>
+    fruitsArray.forEach(([fruitX, fruitY]) =>
+      drawImage(context, muffin, fruitX, fruitY, 1, 1)
+    )
+
+  const drawKeyOnTopBar = (context) => {
+    const dx = canvasSize[0] / scale - 250 / scale
+    const dy = 4 / scale
+    drawImage(context, key, dx, dy, 0.6, 0.6)
+  }
+
+  const drawSparkle = (context) => {
+    const sx = imageSWidth * sparkleColumn
+    const sy = imageSHeight * sparkleRow
+    const dx = bonusPosition?.[0] - 0.5
+    const dy = bonusPosition?.[1] - 0.5
+    const dWidth = 2
+    const dHeight = 2
+
+    drawImageFromSpritesheet(
+      context,
+      sparkle,
+      sx,
+      sy,
+      imageSWidth,
+      imageSHeight,
+      dx,
+      dy,
+      dWidth,
+      dHeight
+    )
+  }
+
+  const drawTeleport = (context) => {
+    const sx = teleportSWidth * teleportColumn
+    const sy = teleportSHeight * teleportRow
+    const teleportPosition = bonusArea ? teleportInCavePosition : bonusPosition
+    const dx = teleportPosition?.[0] - 1.5
+    const dy = teleportPosition?.[1] - 1.5
+    const dWidth = 4
+    const dHeight = 4
+
+    drawImageFromSpritesheet(
+      context,
+      teleportImg,
+      sx,
+      sy,
+      teleportSWidth,
+      teleportSHeight,
+      dx,
+      dy,
+      dWidth,
+      dHeight
+    )
+  }
+
+  const drawCrashAnimation = (context) => {
+    const crashImage = new Image()
+    crashImage.src = boom
+    const sx = imageSWidth * crashColumn
+    const sy = imageSHeight * crashRow
+    const dx = snake?.[0][0] - 1.5
+    const dy = snake?.[0][1] - 1.5
+    const dWidth = 4
+    const dHeight = 4
+
+    drawImageFromSpritesheet(
+      context,
+      boom,
+      sx,
+      sy,
+      imageSWidth,
+      imageSHeight,
+      dx,
+      dy,
+      dWidth,
+      dHeight
+    )
+  }
+
+  const drawImageFromSpritesheet = (
+    context,
+    imageSrc,
+    sx,
+    sy,
+    sWidth,
+    sHeight,
+    dx,
+    dy,
+    dWidth,
+    dHeight
+  ) => {
+    const image = new Image()
+    image.src = imageSrc
+    context.drawImage(image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight)
+  }
+
+  //Draw functions - end
+
   return {
-    moveSnake,
-    playAgain,
-    pauseGame,
-    startGame,
-    applePosition,
-    setApplePosition,
     pointsMultiplier,
-    setPointsMultiplier,
-    snake,
-    setSnake,
-    direction,
-    setDirection,
     speed,
-    setSpeed,
     gameOver,
-    setGameOver,
-    fruitNumber,
-    setFruitNumber,
     start,
-    setStart,
     pause,
-    setPause,
-    firstRender,
-    setFirstRender,
     score,
-    setScore,
-    canvasRef1,
-    moveSnake,
     win,
+    canvasRef1,
     canvasRef2,
     canvasRef3,
     canvasRef4,
     canvasRef5,
     canvasRef6,
+    canvasRef7,
+    canvasRef8,
+    setPointsMultiplier,
+    setSpeed,
+    startGame,
+    moveSnake,
+    playAgain,
+    pauseGame,
   }
 }
 
